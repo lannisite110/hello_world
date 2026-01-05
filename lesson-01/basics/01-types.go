@@ -113,6 +113,96 @@ func basicTypesDemo() {
 	fmt.Println(" uint8 的所有位都被看做数值（没有符号位）")
 	fmt.Println("  因此编辑器通过类型声明知道应该用那种方式解读")
 }
+
+// 数组示例
+func arrayDemo() {
+	fmt.Println("\n===数组示例===")
+	//声明数组
+	var arr [5]int
+	fmt.Printf("声明但不初始化:%v \n", arr)
+
+	arr = [5]int{1, 2, 3, 4, 5}
+	fmt.Printf("初始化：%v \n", arr)
+	fmt.Println(arr[0])
+	fmt.Println(arr[1])
+	fmt.Println(arr[2])
+
+	//自动推断长度
+	arr2 := [...]int{1, 2, 3}
+	fmt.Printf("自动长度：%v,长度：%d \n", arr2, len(arr2))
+}
+
+func sliceDemo() {
+	fmt.Println("\n===切片示例===")
+	//声明切片
+	var slice []int
+	fmt.Printf("空切片：%v,nil:%t \n", slice, slice == nil)
+	//使用make创建切片
+	slice = make([]int, 3, 5)
+	fmt.Printf("make创建：%v,长度：%d, 容量：%d \n", slice, len(slice), cap(slice))
+
+	//直接初始化
+	slice = []int{1, 2, 3, 4, 5}
+	fmt.Printf("初始化：%v \n", slice)
+
+	slice = append(slice, 6)
+	fmt.Printf("追加后：%v,容量：%d \n", slice, cap(slice))
+
+	//切片截取
+	subSlice := slice[1:3]
+	fmt.Printf("切片[1:3]: %v \n", subSlice)
+
+	//切片共享底层数据
+	subSlice[0] = 999
+	fmt.Printf("修改subSlice后：%v \n", slice)
+}
+
+// 映射示例
+func mapDemo() {
+	fmt.Println("\n===映射示例===")
+
+	//声明映射
+	var m map[string]int
+	fmt.Printf("空映射：%v,nil:%t \n", m, m == nil)
+
+	//使用make创建映射
+	m = make(map[string]int)
+	fmt.Printf("make创建：%v \n", m)
+	m["apple"] = 5
+	m["banana"] = 10
+	fmt.Printf("添加后：%v \n", m)
+
+	//直接初始化
+	m2 := map[string]int{
+		"apple":  10,
+		"banana": 5,
+		"orange": 8,
+	}
+	fmt.Printf("直接初始化：%v \n", m2)
+	//读取值
+	value := m2["apple"]
+	fmt.Printf("apple的值：%d \n", value)
+	value2 := m2["orage"]
+	fmt.Printf("orange的值：%d \n", value2)
+
+	m2["orange"] = 100
+	fmt.Printf("orange的值：%d\n", m2["orange"])
+	//检测key是否存在
+	value, ok := m2["grape"]
+	fmt.Printf("grape存在：%t，值：%d\n", ok, value)
+
+	valueA, okA := m2["apple"]
+	fmt.Printf("apple存在：%t,值：%d \n", okA, valueA)
+
+	fmt.Println("遍历映射")
+	for key, value := range m2 {
+		fmt.Printf("%s:%d\n", key, value)
+	}
+}
+
 func main() {
-	basicTypesDemo()
+	//basicTypesDemo()
+	//arrayDemo()
+	//sliceDemo()
+	mapDemo()
 }
