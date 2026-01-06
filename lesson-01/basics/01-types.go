@@ -200,9 +200,94 @@ func mapDemo() {
 	}
 }
 
+func pointerDemo() {
+	fmt.Println("\n=== 指针示例 ===")
+
+	x := 10
+	fmt.Printf("x的值为:%d \n", x)
+
+	//获取地址
+	p := &x
+	fmt.Printf("x的地址：%p \n", p)
+	fmt.Printf("指针的值：%d \n", *p)
+
+	m := p
+	fmt.Printf("m:%p \n", m)
+	fmt.Printf("m指向的值：%d \n", *m)
+
+	//通过指针修改值
+	*p = 20
+	fmt.Printf("m:%d", *m)
+
+	//指针作为函数参数
+	increment(&x)
+	fmt.Printf("函数修改后的值为：%d \n", x)
+
+	//nil 指针
+	var ptr *int
+	fmt.Printf("nil指针： %v \n", ptr)
+	//值传递vs指针传递
+	fmt.Println("\n ===值传递vs指针传递===")
+	a := 10
+	fmt.Printf("调用前 a=%d \n", a)
+	valuePass(a)
+	fmt.Printf("调用后 a=%d (值未改变)\n", a)
+
+	//指针传递示例
+	b := 10
+	fmt.Printf("\n调用前 b=%d \n", b)
+	pointerPass(&b)
+	fmt.Printf("调用后 b=%d(值已经改变)\n", b)
+
+	//详细说明
+	fmt.Println("\n关键区别：")
+	fmt.Println("1 值传递函数接收的是值的副本，修改副本不影响原值")
+	fmt.Println("2 指针传递：函数接收的是地址，通过地址可以直接修改原值")
+
+}
+
+func increment(p *int) {
+	*p++ //修改指针指向的值
+}
+
+func valuePass(num int) {
+	fmt.Printf(" 函数内接收到的值：%d \n", num)
+	num = 100 //修改副本，不影响原值
+	fmt.Printf(" 函数内修改后：%d \n", num)
+}
+
+// 指针传递
+func pointerPass(num *int) {
+	fmt.Printf(" 函数内接收到的地址：%p \n", num)
+	fmt.Printf(" 函数内接收到的值：%d \n", *num)
+	*num = 100 //通过指针修改原值
+	fmt.Printf(" 函数内修改后：%d \n", *num)
+}
+
+func demonstrateSliceGrowth() {
+	var s []int
+	fmt.Println("开始扩容演示：")
+	for i := 0; i < 20; i++ {
+		oldcap := cap(s)
+		fmt.Print(oldcap)
+		s = append(s, i)
+		newCap := cap(s)
+		if newCap != oldcap {
+			fmt.Printf("添加元素%d:长度=%d,容量%d->%d(扩容!)\n",
+				i, len(s), oldcap, newCap)
+		} else {
+			fmt.Printf("添加元素 %d:长度=%d,容量=%d(未扩容)\n",
+				i, len(s), cap(s))
+		}
+	}
+
+}
+
 func main() {
 	//basicTypesDemo()
 	//arrayDemo()
 	//sliceDemo()
-	mapDemo()
+	//mapDemo()
+	//pointerDemo()
+	demonstrateSliceGrowth()
 }
