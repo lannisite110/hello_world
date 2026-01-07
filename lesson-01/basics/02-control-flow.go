@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func ifDemo() {
 	fmt.Println("===if/else示例===")
@@ -145,9 +148,175 @@ func switchFallthroughDemo() {
 
 	//6 对比：不使用fallthrough的正常分级判断
 	fmt.Println("\n 6.对比：不使用fallthrough的正常分级判断")
+	scores2 := []int{95, 85, 75, 55}
+	for _, score := range scores2 {
+		fmt.Printf(" 分数 %d:", score)
+		switch {
+		case score >= 90:
+			fmt.Println("优秀")
+		case score >= 80:
+			fmt.Println("良好")
+		case score >= 60:
+			fmt.Println("及格")
+		default:
+			fmt.Println("不及格")
+		}
+	}
 }
 
+// for循环示例
+func forloopDmeo() {
+	fmt.Println("\n ===for循环示例===")
+	//基本for循环
+	fmt.Println("基本for循环")
+	for i := 0; i < 5; i++ {
+		fmt.Printf("%d", i)
+	}
+	fmt.Println()
+
+	//类似while循环
+	fmt.Println("类似while循环：")
+	i := 0
+	for i < 5 {
+		fmt.Printf(" %d", i)
+		i++
+	}
+	fmt.Println()
+	//死循环需要break
+	fmt.Println("循环直到满足条件")
+	i = 0
+	for {
+		if i >= 5 {
+			break
+		}
+		fmt.Printf("%d", i)
+		i++
+	}
+	fmt.Println()
+
+	//range遍历数组
+	fmt.Println("range遍历数组：")
+	arr := []int{10, 20, 30, 40, 50}
+	for index, value := range arr {
+		fmt.Printf("索引[%d]=%d\n", index, value)
+	}
+	//只遍历值
+	fmt.Println("只遍历值：")
+	for _, value := range arr {
+		fmt.Printf(" %d ", value)
+	}
+	fmt.Println()
+
+	//遍历字符串
+	fmt.Println("遍历字符串")
+	str := "hello 世界"
+	for i, char := range str {
+		fmt.Printf("[%d]%c \n", i, char)
+	}
+}
+
+func deferDemo() {
+	fmt.Println("\n ===defer示例===")
+	fmt.Println("\n 7. defer用于资源清理")
+	if err := readFile("02-control-flow.go"); err != nil {
+		fmt.Printf("错误：%v \n", err)
+	}
+	if err := readFile("noneeixtent.txt"); err != nil {
+		fmt.Printf("错误：%v \n", err)
+	}
+}
+
+func readFile(filename string) error {
+	defer func() {
+		fmt.Printf("清理资源：%s\n", filename)
+	}()
+
+	fmt.Printf("准备打开：%s \n", filename)
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	defer fmt.Printf("关闭文件：%s \n", filename)
+	fmt.Printf("成功打开：%s \n", filename)
+	return nil
+}
+
+// 演示defer在return之后执行
+func returnWithDefer() int {
+	defer fmt.Println("defer:在return之后执行")
+	fmt.Println("return:先准备返回值")
+	return 42
+}
+
+// 演示defer捕获变量的时机
+func deferValueDemo() {
+	i := 0
+	defer fmt.Println("defer1:i=", i)
+	i++
+	defer fmt.Println("defer2 i=", i)
+	i++
+	fmt.Println("函数内：i=", i)
+
+}
+
+// 演示defer闭包捕获最终值
+func deferClosureDemo() {
+	i := 0
+	i++
+	i++
+	defer func() {
+		fmt.Println("defer闭包：i=", i)
+	}()
+	fmt.Println("函数内：i=", i)
+}
+
+// 演示defer在panic之后也会执行
+func deferWithPanic() {
+	defer func() {
+		fmt.Println("清理工作：defer在panic之后执行")
+	}()
+	fmt.Println("开始执行")
+	fmt.Println("即将panic...")
+	fmt.Println("(演示结束，实际Panic会执行defer)")
+}
+
+// painc和recover示例
+func panicRecoverDemo() {
+	fmt.Println("\n ===panic和recover示例===")
+	fmt.Println("触发Panic但使用Recover捕获")
+	safeOperation()
+
+	fmt.Println("\n 正常执行Panic")
+	riskyOperation()
+}
+
+func safeOperation() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("捕获panic：%v \n", r)
+			fmt.Println("程序继续执行")
+		}
+	}()
+	fmt.Println("即将执行Panic")
+	panic("发生错误")
+	fmt.Println("这行不会执行")
+}
+
+func riskyOperation() {
+	fmt.Println("这会导致程序崩溃")
+	panic("致命错误")
+	fmt.Println("这行不会执行")
+}
 func main() {
 	//ifDemo()
-	swicthDemo()
+	//swicthDemo()
+	//switchFallthroughDemo()
+	//forloopDmeo()
+	//deferDemo()
+	//returnWithDefer()
+	//deferValueDemo()
+	//deferClosureDemo()
+	//deferWithPanic()
+	panicRecoverDemo()
 }
