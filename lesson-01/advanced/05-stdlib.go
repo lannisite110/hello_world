@@ -87,14 +87,21 @@ func fileDemo() {
 
 	writer := bufio.NewWriter(outFile)
 	lines := []string{
-		"第一行：hello，Output!",
-		"第二行：来自bufio.writer",
+		"第一行:hello,Output!",
+		"第二行:来自bufio.writer",
 	}
 	for _, line := range lines {
 		if _, err := writer.WriteString(line + "\n"); err != nil {
+
 			panic(err)
 		}
 	}
+
+	// 关键修复：刷新缓冲区，将内存中的数据写入文件
+	if err := writer.Flush(); err != nil {
+		panic(err)
+	}
+
 	file, err := os.Open(outputPath)
 	if err != nil {
 		panic(err)
