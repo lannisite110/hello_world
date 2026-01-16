@@ -27,7 +27,7 @@ func TestAssociationManyToMany(t *testing.T) {
 	db.Exec("DELETE FROM order_items")
 	db.Exec("DELETE FROM orders")
 	db.Exec("DELETE FROM profiles")
-	db.Exec("DELETE FOMR users")
+	db.Exec("DELETE FROM users")
 	db.Exec("DELETE FROM products")
 	db.Exec("DELETE FROM roles")
 	db.Exec("PRAGMA foreign_keys = ON")

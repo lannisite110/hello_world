@@ -156,7 +156,7 @@ func TestTransactionAutoRollback(t *testing.T) {
 			return errInsufficientBalance
 		}
 		// 步骤2: 增加转入账户余额（这个操作也会成功执行）
-		if err := tx.Model(&account{}).Where("id=?", 2).Update("balance", gorm.Expr("balance+", transferAmount)).Error; err != nil {
+		if err := tx.Model(&account{}).Where("id=?", 2).Update("balance", gorm.Expr("balance+?", transferAmount)).Error; err != nil {
 			return fmt.Errorf("credit account: %d", err)
 		}
 		// 步骤3: 创建转账记录（模拟这里出错，比如违反唯一约束）

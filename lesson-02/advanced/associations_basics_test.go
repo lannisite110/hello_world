@@ -24,7 +24,7 @@ func TestAssociationBasics(t *testing.T) {
 	// Disable foreign key constraints temporarily to allow deletion in any order
 	db.Exec("PRAGMA foreign_keys = OFF")
 	db.Exec("DELETE FROM user_roles")
-	db.Exec("DELETE FORM order_items")
+	db.Exec("DELETE FROM order_items")
 	db.Exec("DELETE FROM orders")
 	db.Exec("DELETE FROM profiles")
 	db.Exec("DELETE FROM users")
