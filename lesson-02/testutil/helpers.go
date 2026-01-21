@@ -69,7 +69,9 @@ func loadEnv() {
 // It loads .env file from examples directory if not already loaded
 func getDBType() DBType {
 	loadEnv()
-	dbType := os.Getenv("TEST_DB_TYPE")
+	//dbType := os.Getenv("TEST_DB_TYPE")
+	dbType := os.Getenv("TEST_POSTGRES_DSN")
+
 	switch dbType {
 	case "mysql":
 		return DBTypeMYSQL
