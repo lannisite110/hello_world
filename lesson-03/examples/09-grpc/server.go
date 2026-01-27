@@ -1,0 +1,327 @@
+package main
+
+import (
+	"coderoot/lesson-03/examples/09-grpc/pb"
+	"context"
+	"fmt"
+	"log"
+	"net"
+	"sync"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
+)
+
+// UserServiceServer 实现 UserService 接口
+type UserServiceServer struct {
+	pb.UnimplementedUserServiceServer
+	users  map[int64]*pb.User
+	mu     sync.RWMutex
+	nextID int64
+}
+
+// NewUserServiceServer 创建新的用户服务实例
+func NewUserServiceServer() *UserServiceServer {
+	server := &UserServiceServer{
+		users:  make(map[int64]*pb.User),
+		nextID: 1,
+	}
+	//初始化一些示例数据
+	server.initSampleData()
+	return server
+}
+
+// initSampleData 初始化示例数据
+func (s *UserServiceServer) initSampleData() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.users[1] = &pb.User{
+		Id:       1,
+		Username: "alice",
+		Email:    "alice@example",
+		Age:      25,
+		Active:   true,
+		Tags:     []string{"admin", "developer"},
+		Metadata: map[string]string{
+			"department": "engineering",
+			"location":   "Beijing",
+		},
+	}
+	s.users[2] = &pb.User{
+		Id:       2,
+		Username: "bob",
+		Email:    "bob@example.com",
+		Age:      30,
+		Active:   true,
+		Tags:     []string{"user", "tester"},
+		Metadata: map[string]string{
+			"department": "qa",
+			"location":   "shanghai"},
+	}
+	s.nextID = 3
+}
+
+// GetUser 获取单个用户
+func (s *UserServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	user, exists := s.users[req.Id]
+	if !exists {
+		return nil, status.Errorf(codes.NotFound, "user with id %d not fount", req.Id)
+	}
+	return user, nil
+}
+
+// CreateUser 创建用户
+func (s *UserServiceServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+	if req.Username == "" || req.Email == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Username and email are required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	//检查用户名是否已经存在
+	for _, user := range s.users {
+		if user.Username == req.Username {
+			return nil, status.Errorf(codes.AlreadyExists, "Username %s already exists", req.Username)
+		}
+	}
+	// 创建新用户
+	user := &pb.User{
+		Id:       s.nextID,
+		Username: req.Username,
+		Email:    req.Email,
+		Age:      req.Age,
+		Active:   true,
+		Tags:     req.Tags,
+		Metadata: req.Metadata,
+	}
+	if user.Metadata == nil {
+		user.Metadata = make(map[string]string)
+	}
+	user.Metadata["created_at"] = time.Now().Format(time.RFC3339)
+	s.users[s.nextID] = user
+	s.nextID++
+
+	return &pb.CreateUserResponse{
+		User:    user,
+		Success: true,
+		Message: fmt.Sprintf("user %s created successfully", user.Username),
+	}, nil
+}
+
+// ListUsers 获取用户列表
+func (s *UserServiceServer) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	//分页参数
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	pagesize := req.PageSize
+	if pagesize < 1 {
+		pagesize = 10
+	}
+	if pagesize > 100 {
+		pagesize = 100
+	}
+	//获取所有用户
+	allUsers := make([]*pb.User, 0, len(s.users))
+	for _, user := range s.users {
+		allUsers = append(allUsers, user)
+	}
+	//计算分页
+	total := int32(len(allUsers))
+	userslen := len(allUsers)
+	start := int((page - 1) * pagesize)
+	end := start + int(pagesize)
+	if start >= userslen {
+		return &pb.ListUsersResponse{
+			Users:    []*pb.User{},
+			Total:    total,
+			Page:     page,
+			PageSize: pagesize,
+		}, nil
+	}
+	if end > userslen {
+		end = userslen
+	}
+	return &pb.ListUsersResponse{
+		Users:    allUsers[start:end],
+		Total:    total,
+		Page:     page,
+		PageSize: pagesize,
+	}, nil
+}
+
+// UpdateUser 更新用户
+func (s *UserServiceServer) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	user, exists := s.users[req.Id]
+	if !exists {
+		return nil, status.Errorf(codes.NotFound, "User with id %d not found", req.Id)
+	}
+	//更新字段
+	if req.Username != "" {
+		user.Username = req.Username
+	}
+	if req.Email != "" {
+		user.Email = req.Email
+	}
+	if req.Age > 0 {
+		user.Age = req.Age
+	}
+	user.Active = req.Active
+	if req.Tags != nil {
+		user.Tags = req.Tags
+	}
+	if req.Metadata != nil {
+		if user.Metadata == nil {
+			user.Metadata = make(map[string]string)
+		}
+		for k, v := range req.Metadata {
+			user.Metadata[k] = v
+		}
+	}
+	user.Metadata["updated_at"] = time.Now().Format(time.RFC3339)
+	return &pb.UpdateUserResponse{
+		User:    user,
+		Success: true,
+		Message: fmt.Sprintf("user %d updated successfully", req.Id),
+	}, nil
+}
+
+// DeleteUser 删除用户
+func (s *UserServiceServer) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, exists := s.users[req.Id]
+	if !exists {
+		return nil, status.Errorf(codes.NotFound, "user with id %d not found", req.Id)
+	}
+	delete(s.users, req.Id)
+	return &pb.DeleteUserResponse{
+		Success: true,
+		Message: fmt.Sprintf("User %d deleted successfully", req.Id),
+	}, nil
+}
+
+// StreamUsers 流式获取用户（服务端流）
+func (s *UserServiceServer) StreamUsers(req *pb.StreamUsersRequest, stream pb.UserService_StreamUsersServer) error {
+	s.mu.RLock()
+	users := make([]*pb.User, 0, len(s.users))
+	for _, user := range s.users {
+		users = append(users, user)
+	}
+	s.mu.RUnlock()
+
+	limit := int(req.Limit)
+	if limit < 0 {
+		limit = len(users)
+	}
+	if limit > len(users) {
+		limit = len(users)
+	}
+	interval := time.Duration(req.IntervalMs) * time.Millisecond
+	if interval <= 0 {
+		interval = 500 * time.Millisecond
+	}
+	for i := 0; i < limit; i++ {
+		if err := stream.Send(users[i]); err != nil {
+			return err
+		}
+		if i < limit-1 {
+			time.Sleep(interval)
+		}
+	}
+	return nil
+}
+
+// BatchCreateUsers 批量创建用户（客户端流）
+func (s *UserServiceServer) BatchCreateUsers(stream pb.UserService_BatchCreateUsersServer) error {
+	var CreateUsers []*pb.User
+	successCount := 0
+	failCount := 0
+	for {
+		req, err := stream.Recv()
+		if err != nil {
+			break
+		}
+		// 创建用户
+		resp, err := s.CreateUser(stream.Context(), req)
+		if err != nil {
+			failCount++
+			log.Printf("Failed to create user %s: %v", req.Username, err)
+			continue
+		}
+		CreateUsers = append(CreateUsers, resp.User)
+		successCount++
+	}
+	return stream.SendAndClose(&pb.BatchCreateUsersResponse{
+		Users:        CreateUsers,
+		SuccessCount: int32(successCount),
+		FailCount:    int32(failCount),
+		Message:      fmt.Sprintf("Batch created %d users, failed %d", successCount, failCount),
+	})
+}
+
+// ChatUsers 双向流（聊天式交互）
+func (s *UserServiceServer) ChatUsers(stream pb.UserService_ChatUsersServer) error {
+	for {
+		msg, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		log.Printf("Received message from %s:%s", msg.UserId, msg.Message)
+		//回显消息
+		response := &pb.ChatMessage{
+			UserId:    "server",
+			Message:   fmt.Sprintf("Echo:%s", msg.Message),
+			Timestamp: time.Now().Unix(),
+		}
+
+		if err := stream.Send(response); err != nil {
+			return err
+		}
+	}
+}
+
+// startServer 启动 gRPC 服务器
+func startServer(port string) error {
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		return fmt.Errorf("failed to list: %v", err)
+	}
+	//创建gRPC
+	grpcServer := grpc.NewServer()
+
+	//注册服务
+	userservice := NewUserServiceServer()
+	pb.RegisterUserServiceServer(grpcServer, userservice)
+
+	// 新增：注册反射服务（关键！让grpcurl/grpcui能识别服务）
+	reflection.Register(grpcServer)
+
+	log.Printf("gRPC sever listening on %s", port)
+	log.Println("Available methods:")
+	log.Println("  - GetUser")
+	log.Println("  - CreateUser")
+	log.Println("  - ListUsers")
+	log.Println("  - UpdateUser")
+	log.Println("  - DeleteUser")
+	log.Println("  - StreamUsers (server streaming)")
+	log.Println("  - BatchCreateUsers (client streaming)")
+	log.Println("  - ChatUsers (bidirectional streaming)")
+
+	if err := grpcServer.Serve(lis); err != nil {
+		return fmt.Errorf("failed to server:%v", err)
+	}
+	return nil
+}
